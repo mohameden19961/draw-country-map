@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.flag_cache/
+*_map.png
+venv/
