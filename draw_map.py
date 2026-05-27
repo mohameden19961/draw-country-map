@@ -75,6 +75,30 @@ def draw_country(country_name):
         facecolor='#90ee90', edgecolor='#2e8b57', linewidth=1.5, alpha=0.85
     )
 
+    admin_name = match_record.attributes.get('ADMIN', '') if match_record else ''
+    if admin_name:
+        shp1 = natural_earth(resolution='10m', category='cultural', name='admin_1_states_provinces')
+        reader1 = Reader(shp1)
+        admin1_geoms = []
+        admin1_labels = []
+        for geom, rec in zip(reader1.geometries(), reader1.records()):
+            if rec.attributes.get('admin') == admin_name:
+                admin1_geoms.append(geom)
+                admin1_labels.append((geom.centroid, rec.attributes.get('name', '')))
+        if admin1_geoms:
+            ax.add_geometries(
+                admin1_geoms, crs=ccrs.PlateCarree(),
+                facecolor='none', edgecolor='#666666', linewidth=0.6, alpha=0.7
+            )
+            for centroid, label in admin1_labels:
+                if label:
+                    ax.plot(centroid.x, centroid.y, 'o', color='#444444', markersize=1.5,
+                            transform=ccrs.PlateCarree())
+                    ax.text(centroid.x, centroid.y, label, fontsize=3.5,
+                            ha='center', va='center', transform=ccrs.PlateCarree(),
+                            bbox=dict(boxstyle='round,pad=0.1', facecolor='white',
+                                      edgecolor='none', alpha=0.5))
+
     ax.set_title(country_name, fontsize=18, fontweight='bold')
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
