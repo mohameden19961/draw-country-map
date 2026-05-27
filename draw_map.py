@@ -10,7 +10,7 @@ import matplotlib.image as mpimg
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.shapereader import natural_earth, Reader
-from shapely.geometry import MultiPolygon
+from shapely.geometry import MultiPolygon, Polygon
 
 
 def fetch_flag(iso_code):
@@ -30,6 +30,10 @@ def fetch_flag(iso_code):
 
 
 def draw_country(country_name):
+    if country_name.lower() == 'israel':
+        print("The occupied Palestinian territories are part of Palestine.")
+        sys.exit(1)
+
     resolution = '10m'
     shp = natural_earth(resolution=resolution, category='cultural', name='admin_0_countries')
     reader = Reader(shp)
@@ -54,7 +58,19 @@ def draw_country(country_name):
         print(f"Country '{country_name}' not found.")
         sys.exit(1)
 
-    combined = MultiPolygon(countries) if len(countries) > 1 else countries[0]
+    if country_name.lower() == 'palestine':
+        for geom, record in zip(reader.geometries(), reader.records()):
+            name = record.attributes.get('NAME', record.attributes.get('ADMIN', ''))
+            if name.lower() == 'israel':
+                countries.append(geom)
+
+    polygons = []
+    for g in countries:
+        if isinstance(g, MultiPolygon):
+            polygons.extend(list(g.geoms))
+        else:
+            polygons.append(g)
+    combined = MultiPolygon(polygons)
     bounds = combined.bounds
 
     fig = plt.figure(figsize=(14, 10))
