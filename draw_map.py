@@ -92,7 +92,43 @@ def draw_country(country_name):
     )
 
     admin_name = match_record.attributes.get('ADMIN', '') if match_record else ''
-    if admin_name:
+
+    if country_name.lower() == 'palestine':
+        cities = [
+            (31.7683, 35.2137, 'Al-Quds (القدس)'),
+            (31.5, 34.4667, 'Gaza (غزة)'),
+            (31.5333, 35.095, 'Al-Khalil (الخليل)'),
+            (32.2167, 35.2667, 'Nablus (نابلس)'),
+            (32.4667, 35.3, 'Jenin (جنين)'),
+            (31.9, 35.2, 'Ramallah (رام الله)'),
+            (31.7031, 35.1956, 'Bethlehem (بيت لحم)'),
+            (31.8667, 35.45, 'Jericho (أريحا)'),
+            (32.3167, 35.0167, 'Tulkarm (طولكرم)'),
+            (32.1833, 34.9667, 'Qalqilya (قلقيلية)'),
+            (32.0833, 35.1833, 'Salfit (سلفيت)'),
+            (32.3167, 35.3667, 'Tubas (طوباس)'),
+            (32.05, 34.7667, 'Yafa (يافا)'),
+            (32.9333, 35.0833, 'Akka (عكا)'),
+            (32.8167, 34.9833, 'Haifa (حيفا)'),
+            (32.7, 35.3, 'Al-Nasira (الناصرة)'),
+            (32.9667, 35.5, 'Safad (صفد)'),
+            (32.7833, 35.5333, 'Tabariyya (طبريا)'),
+            (31.25, 34.7833, 'Bir al-Saba (بئر السبع)'),
+            (31.6667, 34.5667, 'Asqalan (عسقلان)'),
+            (31.95, 34.9, 'Al-Lydd (اللد)'),
+            (31.9333, 34.8667, 'Al-Ramla (الرملة)'),
+            (32.55, 35.85, 'Irbid (إربد)'),
+            (31.95, 35.9333, 'Amman (عمان)'),
+        ]
+        for lat, lon, label in cities:
+            ax.plot(lon, lat, 'o', color='#8b0000', markersize=3, transform=ccrs.PlateCarree())
+            fs = 5.5 if 'Al-Quds' in label else 4
+            ax.text(lon, lat, label, fontsize=fs, ha='center', va='bottom',
+                    transform=ccrs.PlateCarree(),
+                    bbox=dict(boxstyle='round,pad=0.15', facecolor='white',
+                              edgecolor='#8b0000', alpha=0.75))
+
+    elif admin_name:
         shp1 = natural_earth(resolution='10m', category='cultural', name='admin_1_states_provinces')
         reader1 = Reader(shp1)
         admin1_geoms = []
