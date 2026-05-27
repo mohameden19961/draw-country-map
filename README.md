@@ -1,5 +1,7 @@
 # Draw Country Map
 
+![Mauritania](mauritania_map.png)
+
 Generate high-resolution maps of any country with its administrative divisions (wilayas, states, regions, départements, provinces) and national flag.
 
 ## Features
@@ -9,6 +11,7 @@ Generate high-resolution maps of any country with its administrative divisions (
 - **National flag** — fetches and displays the country's flag on the map
 - **High resolution** — outputs 300 DPI PNG images
 - **Full geographic context** — includes oceans, lakes, rivers, coastline, and gridlines
+- **Cross-platform** — runs on Linux, macOS, and Windows (Python ≥ 3.8)
 
 ## Quick Start
 
@@ -32,11 +35,13 @@ python3 draw_map.py Egypt
 python3 draw_map.py "South Korea"
 python3 draw_map.py Brazil
 python3 draw_map.py Japan
+python3 draw_map.py Mauritania
 ```
 
 The map is saved as `{country}_map.png` (e.g. `egypt_map.png`). Flags are cached in `.flag_cache/` to avoid repeated downloads.
 
 ## Dependencies
 
+- Python ≥ 3.8
 - [cartopy](https://scitools.org.uk/cartopy/) — geographic data and map projections
 - [matplotlib](https://matplotlib.org/) — rendering and plotting
