@@ -11,6 +11,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.shapereader import natural_earth, Reader
 from shapely.geometry import MultiPolygon, Polygon
+import numpy as np
 
 
 def fetch_flag(iso_code):
@@ -29,6 +30,53 @@ def fetch_flag(iso_code):
         return None
 
 
+def compute_area_km2(geom):
+    centroid = geom.centroid
+    try:
+        from pyproj import Proj
+        lon, lat = centroid.x, centroid.y
+        proj_str = f'+proj=laea +lat_0={lat} +lon_0={lon} +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs'
+        proj = Proj(proj_str)
+        from shapely.ops import transform
+        projected = transform(lambda x, y: proj(x, y), geom)
+        return projected.area / 1_000_000
+    except Exception:
+        return None
+
+
+def format_number(n):
+    if n is None:
+        return 'N/A'
+    if n >= 1_000_000_000:
+        return f'{n / 1_000_000_000:.1f}B'
+    if n >= 1_000_000:
+        return f'{n / 1_000_000:.1f}M'
+    if n >= 1_000:
+        return f'{n / 1_000:.0f}K'
+    return f'{n:.0f}'
+
+
+def get_country_info(record):
+    area_km2 = compute_area_km2(record.attr_geom) if hasattr(record, 'attr_geom') else None
+    lines = []
+    formal = record.attributes.get('FORMAL_EN', '')
+    if formal and formal != '-99':
+        lines.append(formal)
+    pop = record.attributes.get('POP_EST')
+    if pop and pop != -99:
+        lines.append(f'Population: {format_number(pop)}')
+    gdp = record.attributes.get('GDP_MD')
+    if gdp and gdp != -99:
+        lines.append(f'GDP: ${format_number(gdp * 1_000_000)}')
+    continent = record.attributes.get('CONTINENT', '')
+    if continent and continent != '-99':
+        lines.append(f'Continent: {continent}')
+    subregion = record.attributes.get('SUBREGION', '')
+    if subregion and subregion != '-99':
+        lines.append(f'Region: {subregion}')
+    return '\n'.join(lines)
+
+
 def draw_country(country_name):
     if country_name.lower() == 'israel':
         print("The occupied Palestinian territories are part of Palestine.")
@@ -40,11 +88,13 @@ def draw_country(country_name):
 
     countries = []
     match_record = None
+    all_country_geoms = []
     for geom, record in zip(reader.geometries(), reader.records()):
         name = record.attributes.get('NAME', record.attributes.get('ADMIN', ''))
         if name.lower() == country_name.lower():
             countries.append(geom)
             match_record = record
+            all_country_geoms.append(geom)
 
     if not countries:
         for geom, record in zip(reader.geometries(), reader.records()):
@@ -53,6 +103,7 @@ def draw_country(country_name):
                 countries.append(geom)
                 if match_record is None:
                     match_record = record
+                all_country_geoms.append(geom)
 
     if not countries:
         print(f"Country '{country_name}' not found.")
@@ -63,6 +114,7 @@ def draw_country(country_name):
             name = record.attributes.get('NAME', record.attributes.get('ADMIN', ''))
             if name.lower() == 'israel':
                 countries.append(geom)
+                all_country_geoms.append(geom)
 
     polygons = []
     for g in countries:
@@ -72,6 +124,12 @@ def draw_country(country_name):
             polygons.append(g)
     combined = MultiPolygon(polygons)
     bounds = combined.bounds
+
+    country_geom = MultiPolygon([g for g in all_country_geoms if isinstance(g, Polygon)] +
+                               [g for multi in all_country_geoms if isinstance(multi, MultiPolygon)
+                                for g in multi.geoms])
+    if match_record:
+        match_record.attr_geom = country_geom
 
     fig = plt.figure(figsize=(14, 10))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
@@ -169,6 +227,16 @@ def draw_country(country_name):
         ax_flag = fig.add_axes([0.82, 0.82, 0.12, 0.08], anchor='NE', zorder=10)
         ax_flag.imshow(flag_img)
         ax_flag.axis('off')
+
+    if match_record:
+        info_text = get_country_info(match_record)
+        if info_text:
+            ax_info = fig.add_axes([0.82, 0.82 - 0.08 - 0.05, 0.16, 0.12], anchor='NE', zorder=10)
+            ax_info.axis('off')
+            ax_info.text(0, 1, info_text, fontsize=6.5, va='top', ha='left',
+                         transform=ax_info.transAxes,
+                         bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
+                                   edgecolor='#333333', alpha=0.85))
 
     out = f"{country_name.lower().replace(' ', '_')}_map.png"
     plt.savefig(out, dpi=300, bbox_inches='tight')
