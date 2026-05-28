@@ -8,7 +8,10 @@ Generate high-resolution maps of any country with its administrative divisions (
 
 - **Accurate borders** — uses Natural Earth 10m resolution data
 - **Administrative divisions** — shows and labels subnational regions with their names
+- **Smart labels** — filters regions by size and uses `adjustText` to avoid overlapping labels
+- **Country info panel** — displays area, population, GDP, continent on the map
 - **National flag** — fetches and displays the country's flag on the map
+- **Adaptive projection** — uses Robinson projection for wide countries (Russia, Canada, etc.) to avoid distortion
 - **High resolution** — outputs 300 DPI PNG images
 - **Full geographic context** — includes oceans, lakes, rivers, coastline, and gridlines
 - **Cross-platform** — runs on Linux, macOS, and Windows (Python ≥ 3.8)

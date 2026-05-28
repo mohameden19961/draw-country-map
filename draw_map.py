@@ -132,10 +132,18 @@ def draw_country(country_name):
         match_record.attr_geom = country_geom
 
     fig = plt.figure(figsize=(14, 10))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-
-    pad = max((bounds[2] - bounds[0]) * 0.1, 1)
-    ax.set_extent([bounds[0] - pad, bounds[2] + pad, bounds[1] - pad, bounds[3] + pad], crs=ccrs.PlateCarree())
+    lon_range = bounds[2] - bounds[0]
+    lat_range = bounds[3] - bounds[1]
+    wide = lon_range > 120
+    central_lon = (bounds[0] + bounds[2]) / 2
+    if wide:
+        ax = fig.add_subplot(1, 1, 1, projection=ccrs.Robinson(central_longitude=central_lon))
+    else:
+        ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+    pad_lon = max(lon_range * (0.06 if wide else 0.1), 1)
+    pad_lat = max(lat_range * 0.08, 1)
+    ax.set_extent([bounds[0] - pad_lon, bounds[2] + pad_lon,
+                   bounds[1] - pad_lat, bounds[3] + pad_lat], crs=ccrs.PlateCarree())
 
     ax.add_feature(cfeature.OCEAN, facecolor='#c6e2ff')
     ax.add_feature(cfeature.LAND, facecolor='#f5f5dc', alpha=0.4)
@@ -190,24 +198,57 @@ def draw_country(country_name):
         shp1 = natural_earth(resolution='10m', category='cultural', name='admin_1_states_provinces')
         reader1 = Reader(shp1)
         admin1_geoms = []
-        admin1_labels = []
+        admin1_data = []
         for geom, rec in zip(reader1.geometries(), reader1.records()):
             if rec.attributes.get('admin') == admin_name:
                 admin1_geoms.append(geom)
-                admin1_labels.append((geom.centroid, rec.attributes.get('name', '')))
+                label = rec.attributes.get('name', '')
+                if label:
+                    area_km2 = compute_area_km2(geom)
+                    admin1_data.append((geom.centroid, label, area_km2))
         if admin1_geoms:
             ax.add_geometries(
                 admin1_geoms, crs=ccrs.PlateCarree(),
                 facecolor='none', edgecolor='#666666', linewidth=0.6, alpha=0.7
             )
-            for centroid, label in admin1_labels:
-                if label:
-                    ax.plot(centroid.x, centroid.y, 'o', color='#444444', markersize=1.5,
-                            transform=ccrs.PlateCarree())
-                    ax.text(centroid.x, centroid.y, label, fontsize=3.5,
-                            ha='center', va='center', transform=ccrs.PlateCarree(),
-                            bbox=dict(boxstyle='round,pad=0.1', facecolor='white',
-                                      edgecolor='none', alpha=0.5))
+            if admin1_data:
+                areas = [a for _, _, a in admin1_data if a]
+                med_area = np.median(areas) if areas else 0
+                min_area = med_area * 0.02 if med_area > 0 else 0
+                max_label = 30
+                if len(admin1_data) > 100:
+                    max_label = int(len(admin1_data) * 0.25)
+                elif len(admin1_data) > 50:
+                    max_label = int(len(admin1_data) * 0.35)
+                filtered = [(c, l, a) for c, l, a in admin1_data
+                            if a is None or a >= min_area]
+                filtered.sort(key=lambda x: -(x[2] or 0))
+                filtered = filtered[:max_label]
+
+                texts = []
+                for centroid, label, _ in filtered:
+                    ax.plot(centroid.x, centroid.y, 'o', color='#444444',
+                            markersize=1.5, transform=ccrs.PlateCarree(),
+                            zorder=5)
+                    fs = max(2.5, min(5, 5 - len(filtered) / 40))
+                    t = ax.text(centroid.x, centroid.y, label, fontsize=fs,
+                                ha='center', va='center', transform=ccrs.PlateCarree(),
+                                bbox=dict(boxstyle='round,pad=0.08', facecolor='white',
+                                          edgecolor='none', alpha=0.6),
+                                zorder=6)
+                    texts.append(t)
+
+                if len(texts) > 5:
+                    try:
+                        from adjustText import adjust_text
+                        adjust_text(texts, ax=ax, force_text=0.3,
+                                    force_static=0.3, force_pull=0.2,
+                                    ensure_inside_axes=False,
+                                    avoid_self=False,
+                                    autoalign='xy',
+                                    expand=(1.3, 1.5))
+                    except Exception:
+                        pass
 
     ax.set_title(country_name, fontsize=18, fontweight='bold')
     ax.set_xlabel('Longitude')
